@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fantasy Summary</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1c1f2b;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --row-hover: #eef2ff;
+      --top: #fef3c7;
+      --error: #b91c1c;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1117;
+        --card: #181b24;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --border: #2a2f3d;
+        --accent: #60a5fa;
+        --row-hover: #1f2537;
+        --top: #3b3415;
+        --error: #f87171;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    main { max-width: 900px; margin: 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    .subtitle { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+    .subtitle a { color: var(--accent); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); }
+    @media (max-width: 720px) {
+      th, td { padding: 10px 8px; font-size: 14px; }
+    }
+    tr:last-child td { border-bottom: none; }
+    th { font-size: 13px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover, th.active { color: var(--accent); }
+    th .arrow { display: inline-block; width: 1em; opacity: 0.6; }
+    td.number { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td.rank { color: var(--muted); width: 48px; }
+    tbody tr:hover { background: var(--row-hover); }
+    tbody tr.leader { background: var(--top); }
+    .status { padding: 24px; text-align: center; color: var(--muted); }
+    .status.error { color: var(--error); }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 12px; }
+    button {
+      font: inherit;
+      color: var(--accent);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="league-name">Fantasy Summary</h1>
+    <p class="subtitle">
+      <span id="updated-at">טוען...</span>
+      · <a id="espn-link" href="#" target="_blank" rel="noopener">לטבלה ב-ESPN</a>
+      · <button id="refresh" type="button">רענון</button>
+    </p>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>שם הקבוצה</th>
+            <th>שם המנג'ר</th>
+            <th>מספר משחקים</th>
+            <th class="sortable" data-sort="totalPoints">נקודות <span class="arrow"></span></th>
+            <th class="sortable" data-sort="averagePointsPerGame">ממוצע למשחק <span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="6" class="status">טוען נתונים מ-ESPN...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint">לחיצה על "נקודות" או "ממוצע למשחק" ממיינת את הטבלה. לחיצה נוספת הופכת את הכיוון.</p>
+  </main>
+
+  <script>
+    const LEAGUE_ID = 450062970;
+    // ESPN stat id for "games played": the sum of games played by the players on the roster.
+    const GAMES_PLAYED_STAT_ID = "42";
+    // ESPN keys a season by the year it ends, and a new season opens in October.
+    const FIRST_MONTH_OF_NEW_SEASON = 9;
+
+    const espnStandingsUrl = `https://fantasy.espn.com/basketball/league/standings?leagueId=${LEAGUE_ID}`;
+    const leagueApiUrl = (seasonId) =>
+      `https://lm-api-reads.fantasy.espn.com/apis/v3/games/fba/seasons/${seasonId}/segments/0/leagues/${LEAGUE_ID}?view=mTeam&view=mSettings`;
+
+    const getCurrentSeasonId = (now = new Date()) =>
+      now.getMonth() >= FIRST_MONTH_OF_NEW_SEASON ? now.getFullYear() + 1 : now.getFullYear();
+
+    const fetchLeague = (seasonId) =>
+      fetch(leagueApiUrl(seasonId), { headers: { accept: "application/json" } }).then((response) => {
+        if (response.ok) {
+          return response.json();
+        }
+        // Before the first ESPN update of a new season the current id is not there yet; fall back one year.
+        if (response.status === 404) {
+          return fetch(leagueApiUrl(seasonId - 1)).then((fallback) => {
+            if (!fallback.ok) {
+              throw new Error(`ESPN החזיר ${fallback.status}`);
+            }
+            return fallback.json();
+          });
+        }
+        throw new Error(`ESPN החזיר ${response.status}`);
+      });
+
+    const getManagerName = (team, membersById) => {
+      const owner = (team.owners ?? []).map((ownerId) => membersById.get(ownerId)).find(Boolean);
+      if (!owner) {
+        return "—";
+      }
+      const fullName = [owner.firstName, owner.lastName].filter(Boolean).join(" ").trim();
+      return fullName || owner.displayName;
+    };
+
+    const toTeamSummaries = (league) => {
+      const membersById = new Map(league.members.map((member) => [member.id, member]));
+      return league.teams.map((team) => {
+        const gamesPlayed = team.valuesByStat?.[GAMES_PLAYED_STAT_ID] ?? 0;
+        const totalPoints = team.points ?? 0;
+        return {
+          teamName: team.name.trim(),
+          managerName: getManagerName(team, membersById),
+          gamesPlayed,
+          totalPoints,
+          averagePointsPerGame: gamesPlayed > 0 ? totalPoints / gamesPlayed : 0
+        };
+      });
+    };
+
+    const formatNumber = (value, digits) =>
+      new Intl.NumberFormat("he-IL", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+
+    const escapeHtml = (text) => {
+      const element = document.createElement("span");
+      element.textContent = text;
+      return element.innerHTML;
+    };
+
+    const rowsElement = document.getElementById("rows");
+    const headers = [...document.querySelectorAll("th.sortable")];
+    const refreshButton = document.getElementById("refresh");
+
+    let teams = [];
+    let sortKey = "totalPoints";
+    let isDescending = true;
+
+    const renderRows = () => {
+      const direction = isDescending ? -1 : 1;
+      const sortedTeams = [...teams].sort((first, second) => (first[sortKey] - second[sortKey]) * direction);
+      const leaderValue = sortedTeams[0]?.[sortKey];
+      rowsElement.innerHTML = sortedTeams
+        .map((team, index) => `
+          <tr class="${team[sortKey] === leaderValue ? "leader" : ""}">
+            <td class="rank">${index + 1}</td>
+            <td>${escapeHtml(team.teamName)}</td>
+            <td>${escapeHtml(team.managerName)}</td>
+            <td class="number">${formatNumber(team.gamesPlayed, 0)}</td>
+            <td class="number">${formatNumber(team.totalPoints, 0)}</td>
+            <td class="number">${formatNumber(team.averagePointsPerGame, 2)}</td>
+          </tr>`)
+        .join("");
+      headers.forEach((header) => {
+        const isActive = header.dataset.sort === sortKey;
+        header.classList.toggle("active", isActive);
+        header.querySelector(".arrow").textContent = isActive ? (isDescending ? "▼" : "▲") : "";
+      });
+    };
+
+    const renderStatus = (message, isError = false) => {
+      rowsElement.innerHTML = `<tr><td colspan="6" class="status ${isError ? "error" : ""}">${escapeHtml(message)}</td></tr>`;
+    };
+
+    const load = () => {
+      refreshButton.disabled = true;
+      document.getElementById("updated-at").textContent = "טוען...";
+      return fetchLeague(getCurrentSeasonId())
+        .then((league) => {
+          teams = toTeamSummaries(league);
+          document.getElementById("league-name").textContent = league.settings?.name ?? "Fantasy Summary";
+          document.title = `Fantasy Summary · ${league.settings?.name ?? ""}`.trim();
+          document.getElementById("updated-at").textContent =
+            "עודכן: " + new Intl.DateTimeFormat("he-IL", { dateStyle: "medium", timeStyle: "short" }).format(new Date());
+          renderRows();
+        })
+        .catch((error) => {
+          document.getElementById("updated-at").textContent = "הטעינה נכשלה";
+          renderStatus(`לא הצלחנו לטעון את הנתונים מ-ESPN (${error.message}). נסו לרענן.`, true);
+        })
+        .finally(() => {
+          refreshButton.disabled = false;
+        });
+    };
+
+    headers.forEach((header) => {
+      header.addEventListener("click", () => {
+        const clickedKey = header.dataset.sort;
+        isDescending = clickedKey === sortKey ? !isDescending : true;
+        sortKey = clickedKey;
+        renderRows();
+      });
+    });
+    refreshButton.addEventListener("click", load);
+    document.getElementById("espn-link").href = espnStandingsUrl;
+
+    load();
+  </script>
+</body>
+</html>
