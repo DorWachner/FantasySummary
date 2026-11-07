@@ -9,6 +9,12 @@ Click "נקודות" or "ממוצע למשחק" to sort; click again to flip the
 so no ESPN login is needed, and ESPN allows cross-origin requests, so the page works from any
 static host or straight from disk.
 
+## Team photos
+
+`photos/<teamId>.jpg` is the 200px square shown in the table, and `photos/<teamId>-full.jpg` opens
+on click. Photos are keyed by ESPN team id, listed in `TEAMS_WITH_PHOTOS` in `index.html`. A team
+without a photo falls back to its public ESPN logo, then to the first letter of its name.
+
 ## Hosting
 
 The page is published with GitHub Pages from the `main` branch root. Any change to `index.html`
