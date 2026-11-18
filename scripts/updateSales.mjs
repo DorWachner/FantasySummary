@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { getCurrentSeasonId } from "../js/config.js";
 import { fetchLeague, getLatestPeriod, fetchSeasonCards, fetchRosteredPlayerCards } from "../js/espnApi.js";
-import { SALES_METRIC, seasonRanking, nightRanking } from "../js/seasonSales.js";
+import { SALES_METRIC, seasonRanking, nightRanking, saveSeasonRanks } from "../js/seasonSales.js";
 
 const league = await fetchLeague(getCurrentSeasonId());
 const season = league.seasonId;
@@ -29,6 +29,7 @@ for (const {player} of cards) {
 }
 const today = rank(period).map(row => ({...row, team:teams.get(row.teamId), nightPoints:nightlyPoints.get(row.playerId) ?? null}));
 history.periods[period] = compact(today);
+saveSeasonRanks(history, period, today);
 const night = nightRanking(totals,cards,season,period,teams);
 history.nightRanks ??= {};
 const previousNight = history.nightRanks[period-1] ?? nightRanking(totals,cards,season,period-1,teams).map(row => row.playerId);
@@ -39,5 +40,5 @@ const nba = await nbaResponse.json();
 const nbaTeams = Object.fromEntries(nba.sports[0].leagues[0].teams.map(({team}) =>
   [team.id, {name: team.displayName, logo: team.logos?.[0]?.href, color: team.color, alternateColor: team.alternateColor}]));
 history.latest = {period, today, night, previousNight, nbaTeams,
-  previous: history.periods[period - 1] ?? compact(rank(period - 1)), projectionsAvailable: Boolean(projections)};
+  projectionsAvailable: Boolean(projections)};
 await writeFile(file, JSON.stringify(history) + "\n");

@@ -178,14 +178,11 @@ export function showSales() {
   }).then(history => {
     if (current !== context) return;
     if (history.season !== seasonId || history.metric !== SALES_METRIC || !history.latest) throw Error("Sales snapshot unavailable");
-    const { period, night, today, previous, projectionsAvailable } = history.latest;
+    const { period, night, today, projectionsAvailable } = history.latest;
     current.nbaTeams = history.latest.nbaTeams;
-    const yesterday = history.periods[period - 1] ?? previous;
     const seasonPanel = element("div", "");
     if (projectionsAvailable) {
-      const injured = new Set(today.filter(row => row.injury && row.injury !== "מושעה").map(row => row.playerId));
-      const eligible = rows => rows.filter(row => !injured.has(row.playerId));
-      const season = compareRankings(eligible(today), eligible(yesterday));
+      const season = compareRankings(today, history.seasonRanks?.[period - 1]);
       seasonPanel.append(group("טופ " + SEASON_RANK_LIMIT + " המוכרים העונתיים · " + formatShortDate(getPeriodDate(period, latestPeriod)),
         season, false, []));
     } else seasonPanel.append(element("p", "טרם נשמרו תחזיות פתיחה לעונה הזאת."));

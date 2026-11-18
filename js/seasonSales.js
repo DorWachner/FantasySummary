@@ -23,12 +23,24 @@ export function seasonRanking(totals, cards, projections, seasonId, period) {
   return rows.sort((a,b) => b.gap - a.gap || a.playerId - b.playerId);
 }
 
-export function compareRankings(today, yesterday) {
-  const prior = new Map(yesterday.map((row,i) => [row.playerId, {rank:i+1, gap:row.gap}]));
-  return today.filter(row => row.gap > 0).slice(0, SEASON_RANK_LIMIT).map((row,i) => {
-    const old = prior.get(row.playerId);
-    return {...row, movement: old ? old.rank - (i+1) : null, previousRank: old?.rank, change: old ? row.gap - old.gap : null};
-  });
+export function displayedSeasonRows(rows) {
+  return rows.filter(row => row.gap > 0 && (!row.injury || row.injury === "מושעה"))
+    .slice(0, SEASON_RANK_LIMIT);
+}
+
+export function saveSeasonRanks(history, period, today) {
+  history.seasonRanks ??= {};
+  const last = history.latest;
+  // Older snapshots retained injury status only for the latest scoring period.
+  if (last?.projectionsAvailable && !history.seasonRanks[last.period]) {
+    history.seasonRanks[last.period] = displayedSeasonRows(last.today).map(row => row.playerId);
+  }
+  history.seasonRanks[period] = displayedSeasonRows(today).map(row => row.playerId);
+}
+
+export function compareRankings(today, previousIds = []) {
+  const previousRanks = new Map(previousIds.map((id, index) => [id, index + 1]));
+  return displayedSeasonRows(today).map(row => ({...row, previousRank: previousRanks.get(row.playerId)}));
 }
 
 export function nightRanking(totals, cards, seasonId, period, teams) {
