@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fantasy Summary</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=broadcast-1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <script src="js/main.js" type="module"></script>
 </head>
@@ -13,6 +13,7 @@
     <nav class="sidebar" aria-label="תפריט">
       <div class="brand">🏀 Fantasy Summary</div>
       <a href="#table" data-nav="table">טבלה</a>
+      <a href="#sales" data-nav="sales">טבלת מכירות</a>
       <a href="#updates" data-nav="updates">עדכוני שחקנים</a>
     </nav>
 
@@ -70,6 +71,14 @@
         </section>
       </section>
 
+      <section id="view-sales" hidden>
+        <div class="sales-heading"><h2 id="sales-title">טבלת מכירות</h2></div>
+        <div class="segmented updates-tabs" role="tablist" aria-label="דירוג מכירות">
+          <button type="button" role="tab" id="night-tab" aria-controls="sales-content" aria-selected="true" class="active">המוכר של הלילה</button>
+          <button type="button" role="tab" id="season-tab" aria-controls="sales-content" aria-selected="false" tabindex="-1">המוכרים העונתיים</button>
+        </div>
+        <div id="sales-content" role="tabpanel" tabindex="0" aria-labelledby="night-tab" aria-live="polite">טוען נתוני מכירות…</div>
+      </section>
       <section id="view-updates" hidden>
         <div class="segmented updates-tabs" role="tablist" aria-label="סוג עדכון">
           <button type="button" data-updates-tab="hot" class="active">🔥 שחקנים חמים</button>

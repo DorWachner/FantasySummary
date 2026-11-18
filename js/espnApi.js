@@ -69,3 +69,15 @@ export const fetchFreeAgentCards = (seasonId) =>
     limit: MAX_FREE_AGENTS,
     sortAppliedStatTotal: { sortAsc: false, sortPriority: 1, value: `01${seasonId}` }
   });
+export const fetchSeasonCards = (seasonId) =>
+  fetch(getLeagueUrl(seasonId, ["kona_player_info"]), {
+    headers: { "x-fantasy-filter": JSON.stringify({ players: {
+      filterStatus: { value: ["ONTEAM"] },
+      filterStatsForSourceIds: { value: [0] },
+      filterStatsForSplitTypeIds: { value: [0] },
+      filterStatsForExternalIds: { value: [seasonId] }
+    } }) }
+  }).then(async response => {
+    if (!response.ok) throw Error("ESPN " + response.status);
+    return (await response.json()).players;
+  });
