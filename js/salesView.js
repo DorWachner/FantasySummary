@@ -12,7 +12,14 @@ const number = new Intl.NumberFormat("he-IL", { maximumFractionDigits: 1 });
 let context;
 let pending;
 const tabs = Array.from(document.querySelectorAll("#view-sales [role=tab]"));
-let selected = tabs[0];
+if (["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {
+  const gmTab = tabs[1].cloneNode(false);
+  gmTab.id = "gm-tab";
+  gmTab.textContent = "איזה GM הכי נמכר?";
+  tabs[1].after(gmTab);
+  tabs.push(gmTab);
+}
+let selected = tabs.find(tab => tab.id === "gm-tab" && new URLSearchParams(location.search).get("ranking") === "gm") ?? tabs[0];
 let boards;
 
 function selectTab(tab) {
@@ -26,13 +33,15 @@ function selectTab(tab) {
   root.setAttribute("aria-labelledby", tab.id);
   if (boards) {
     root.replaceChildren(boards.get(tab.id));
+    if (tab.id === "gm-tab") showGmSales(boards.get(tab.id));
   }
 }
 
 for (const tab of tabs) {
   tab.addEventListener("click", () => selectTab(tab));
   tab.addEventListener("keydown", event => {
-    const next = { Home: tabs[0], End: tabs[1], ArrowLeft: tabs.find(t => t !== tab), ArrowRight: tabs.find(t => t !== tab) }[event.key];
+    const i = tabs.indexOf(tab);
+    const next = { Home: tabs[0], End: tabs.at(-1), ArrowLeft: tabs[(i+1)%tabs.length], ArrowRight: tabs[(i+tabs.length-1)%tabs.length] }[event.key];
     if (!next) return;
     event.preventDefault();
     selectTab(next);
@@ -44,6 +53,134 @@ function element(tag, value) {
   const node = document.createElement(tag);
   node.textContent = value;
   return node;
+}
+
+function gmPhoto(src, name, className) {
+  const frame = element("span", name.split(/\s+/).slice(0, 2).map(word => word[0]).join(""));
+  frame.className = className;
+  frame.setAttribute("aria-hidden", "true");
+  if (src) {
+    const img = new Image();
+    img.alt = "";
+    img.loading = "lazy";
+    img.addEventListener("error", () => img.remove(), {once:true});
+    img.src = src;
+    frame.append(img);
+  }
+  return frame;
+}
+
+async function showGmSales(panel) {
+  if (panel.childElementCount) return;
+  panel.append(element("p", "טוען סגלים היסטוריים ושחרורים לווייברס…"));
+  try {
+    const current = context;
+    const {loadGmSales, rankGms} = await import("./gmSales.js?v=injuries-2");
+    const data = await loadGmSales(current);
+    const toggle = element("label", "");
+    toggle.className = "gm-injury-switch";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.setAttribute("role", "switch");
+    toggle.append("לכלול משחקים שהוחמצו בגלל פציעה", checkbox);
+    const results = element("div", "");
+    const render = () => {
+      const previous = new Map([...results.querySelectorAll("details")].map(detail =>
+        [detail.dataset.team, {open:detail.open, waivers:detail.querySelector('input[value="waivers"]')?.checked}]));
+      results.replaceChildren(gmList(rankGms(data, checkbox.checked), current, checkbox.checked, previous));
+    };
+    checkbox.onchange = render;
+    panel.replaceChildren(element("h3", "דירוג המנהלים"), toggle, results);
+    if (data.uncovered.length) {
+      toggle.after(element("small", "אין דוח פציעות זמין עבור " + data.uncovered.length + " ימי משחק."));
+    }
+    render();
+  } catch {
+    const retry = element("button", "נסה שוב");
+    retry.type = "button";
+    retry.onclick = () => { panel.replaceChildren(); showGmSales(panel); };
+    panel.replaceChildren(element("p", "לא ניתן לטעון דירוג עונתי מלא כרגע."), retry);
+  }
+}
+
+function gmList(rows, current, includeInjuries, previous) {
+    const list = element("ol", "");
+    rows.forEach(({team, players, total, missing}, i) => {
+      const item = element("li", "");
+      const detail = element("details", "");
+      detail.dataset.team = String(team.teamId);
+      const state = previous.get(detail.dataset.team);
+      detail.open = state?.open ?? i === 0;
+      const summary = element("summary", "");
+      const manager = element("span", "");
+      manager.append(element("bdi", team.managerName), element("small", team.teamName));
+      const score = element("strong", "");
+      score.append(element("bdi", number.format(total)), element("small", "נק׳ חסרות"));
+      const identity = element("div", "");
+      identity.className = "gm-identity";
+      identity.append(gmPhoto(TEAMS_WITH_PHOTOS.has(team.teamId) ? "photos/" + team.teamId + ".jpg" : team.espnLogoUrl,
+        team.teamName, "gm-team-photo"), manager);
+      summary.append(element("b", String(i + 1)), identity, score);
+      detail.append(summary);
+      const table = document.createElement("table");
+      table.setAttribute("aria-label", "פירוט השחקנים של " + team.managerName);
+      const header = table.createTHead().insertRow();
+      for (const title of ["שחקן", "מש׳", "צפי", "בפועל", "חוסר"]) {
+        const th = element("th", title);
+        th.scope = "col";
+        header.append(th);
+      }
+      const body = table.createTBody();
+      for (const p of players) {
+        const line = body.insertRow();
+        const player = line.insertCell();
+        const playerInfo = element("div", "");
+        const text = element("div", "");
+        text.append(element("bdi", p.name));
+        if (includeInjuries && p.missed) {
+          text.append(element("small", "משחקים שהחמיץ: " + p.missed + " · צפי למשחק: " +
+            number.format(p.projection) + " · צפי שהוחמץ: " + number.format(p.missed * p.projection) + " נק׳"));
+        }
+        if (p.dropped) text.append(element("small", "שוחרר לווייברס · " + formatShortDate(getPeriodDate(p.dropped, current.latestPeriod))));
+        playerInfo.className = "gm-identity";
+        playerInfo.append(gmPhoto(getPlayerHeadshotUrl(p.id), p.name, "gm-player-photo"), text);
+        player.append(playerInfo);
+        for (const value of [p.games, p.expected, p.points, p.gap]) {
+          line.insertCell().append(element("bdi", number.format(value)));
+        }
+      }
+      if (players.length) {
+        const dropped = players.filter(p => p.dropped).length;
+        if (dropped) {
+          const filter = element("div", "");
+          filter.className = "gm-player-filter";
+          filter.setAttribute("role", "radiogroup");
+          filter.setAttribute("aria-label", "הצגת שחקנים אצל " + team.managerName);
+          const apply = waivers => players.forEach((p, index) => {
+            body.rows[index].hidden = waivers && !p.dropped;
+          });
+          for (const [value, title, count] of [["all","כל השחקנים",players.length],["waivers","שוחררו לווייברס",dropped]]) {
+            const label = element("label", "");
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = "gm-players-" + team.teamId;
+            radio.value = value;
+            radio.checked = (value === "waivers") === Boolean(state?.waivers);
+            radio.onchange = () => apply(value === "waivers");
+            label.append(radio, element("span", title), element("bdi", String(count)));
+            filter.append(label);
+          }
+          apply(Boolean(state?.waivers));
+          detail.append(filter);
+        }
+        detail.append(table);
+      }
+      if (!players.length) detail.append(element("p", "אין שחקנים עם חוסר מצטבר."));
+      if (missing) detail.append(element("small", "שחקנים ששיחקו ללא תחזית זמינה: " + missing));
+      item.append(detail);
+      list.append(item);
+    });
+    return list;
 }
 
 export function setSalesContext(value) {
@@ -192,7 +329,8 @@ export function showSales() {
           const prior = history.latest.previousNight;
           return {...row, previousRank: prior ? (prior.indexOf(row.playerId) + 1 || null) : undefined};
         }), true, [])],
-      ["season-tab", seasonPanel]
+      ["season-tab", seasonPanel],
+      ["gm-tab", Object.assign(element("section", ""), {className:"gm-sales"})]
     ]);
     selectTab(selected);
   }).catch(() => {

@@ -7,7 +7,7 @@ import { initChart, renderChartStatus, setChartData } from "./chartView.js";
 import { initRoster, openRoster, resetRosters } from "./rosterView.js";
 import { initUpdates, setUpdatesContext, showUpdates } from "./updatesView.js";
 
-import { setSalesContext, showSales } from "./salesView.js";
+import { setSalesContext, showSales } from "./salesView.js?v=gm-board-6";
 const VIEWS = ["table", "updates", "sales"];
 const refreshButton = document.getElementById("refresh");
 const updatedAtElement = document.getElementById("updated-at");
