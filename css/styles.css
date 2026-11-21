@@ -455,7 +455,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 .sales-table-wrap { overflow-x: auto; }
 .sales-table { border-collapse: separate; border-spacing: 0 8px; margin-top: -8px; font-variant-numeric: tabular-nums; --down:#b32929; --up:#11713b; }
 .sales-table th { padding: 0 14px; border: 0; }
-.sales-table th.sales-number, .sales-table td.sales-number { text-align: end; }
+.sales-table th.sales-number, .sales-table td.sales-number, .sales-gap span { text-align: center; }
+.sales-table td.sales-gap { width: 1%; min-width: 120px; }
 .sales-table tbody tr:hover { background: transparent; }
 .sales-table td { background: var(--surface); border-block: 1px solid var(--border); padding: 10px 12px; }
 .sales-table td:first-child { border-inline-start: 1px solid var(--border); border-start-start-radius: 12px; border-end-start-radius: 12px; }
@@ -475,10 +476,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 .sales-gap span { display: block; direction: ltr; color: var(--muted); font-size: 1rem; font-weight: 650; }
 .sales-gap.active span { color: var(--down); font-size: 1.45rem; font-weight: 800; }
 #view-kills .sales-gap.active span, #view-kills .sales-movement.up { color: var(--up); }
-.sales-table th.sortable button { all: unset; cursor: pointer; }
+.sales-table th.sortable button { all: unset; position: relative; cursor: pointer; }
 .sales-table th.sortable button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .sales-table th.sortable.active { color: var(--accent); }
-.sales-table th.sortable.active button::after { content: " ▼"; font-size: .7em; }
+.sales-table th.sortable.active button::after { content: "▼"; position: absolute; inset-inline-end: -1.4em; top: 50%; transform: translateY(-50%); font-size: .7em; }
 .sales-metric { align-items: center; margin-block: 4px 12px; font-size: 14px; }
 .sales-metric button { min-height: 36px; }
 @media (prefers-color-scheme: dark) { .sales-table { --down:#ffabab; --up:#89dca7; } }
@@ -496,9 +497,9 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
   .sales-table td.sales-number { text-align: start; padding: 8px 16px 12px; min-width: 0; }
   .sales-table td.sales-number::before { content: attr(data-label); display: block; color: var(--muted); font-size: .78rem; margin-bottom: 2px; }
   .sales-table .sales-comparison { grid-column: 1 / -1; min-width: 0; padding: 12px 16px 4px; }
-  .sales-gap.active span { font-size: 1.2rem; }
-  .sales-table td.sales-gap { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
-  .sales-table td.sales-gap::before { margin: 0; }
+  .sales-gap span, .sales-gap.active span { font-size: 1.2rem; line-height: 1; }
+  .sales-table td.sales-gap { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
+  .sales-table td.sales-gap::before { margin: 0; line-height: 1; font-size: .85rem; }
   .sales-table td.sales-gap + td.sales-gap { border-inline-start: 1px solid var(--border); }
 }
 
