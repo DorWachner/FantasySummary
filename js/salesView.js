@@ -18,7 +18,7 @@ const killTabs = Array.from(document.querySelectorAll("#view-kills [role=tab]"))
 const selections = new Map([[root, tabs[0]], [killsRoot, killTabs[0]]]);
 let boards;
 let snapshot;
-const metrics = new Map([[root, GAP_METRIC.PERCENT], [killsRoot, GAP_METRIC.PERCENT]]);
+const metrics = new Map([[root, GAP_METRIC.POINTS], [killsRoot, GAP_METRIC.POINTS]]);
 const metricButtons = Array.from(document.querySelectorAll("[data-gap-metric]"));
 
 function setMetric(panel, metric) {
