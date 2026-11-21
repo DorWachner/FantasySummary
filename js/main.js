@@ -1,5 +1,5 @@
 import { ESPN_STANDINGS_URL, getCurrentSeasonId } from "./config.js";
-import { fetchLeague, getLatestPeriod } from "./espnApi.js";
+import { fetchLeague, getLatestPeriod } from "./espnApi.js?v=night-1";
 import { loadPeriodPoints } from "./history.js";
 import { buildSeasonHistory, getRankMovement, toTeamSummaries } from "./standings.js";
 import { initTable, renderStatus, setMovements, setTeams } from "./tableView.js";
@@ -8,7 +8,7 @@ import { initRoster, openRoster, resetRosters } from "./rosterView.js";
 import { initUpdates, setUpdatesContext, showUpdates } from "./updatesView.js";
 
 import { setSalesContext, showSales } from "./salesView.js?v=rankings-5";
-import { openNightFirst, setNightContext, shouldOpenNightFirst, showNightWinner } from "./nightWinnerView.js";
+import { openNightFirst, setNightContext, shouldOpenNightFirst, showNightWinner } from "./nightWinnerView.js?v=night-2";
 const VIEWS = ["table", "night", "updates", "sales", "kills"];
 const refreshButton = document.getElementById("refresh");
 const updatedAtElement = document.getElementById("updated-at");

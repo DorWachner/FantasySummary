@@ -1,5 +1,5 @@
 import { getPlayerHeadshotUrl } from "./config.js";
-import { fetchFreeAgentCards, fetchRosteredPlayerCards } from "./espnApi.js";
+import { fetchFreeAgentCards, fetchRosteredPlayerCards } from "./espnApi.js?v=night-1";
 import { escapeHtml, formatNumber, renderTeamAvatar } from "./format.js";
 import { formatShortDate, getPeriodDate } from "./dates.js";
 import { getColdPlayers, getHotPlayers, getInjuredPlayers } from "./players.js";

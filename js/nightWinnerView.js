@@ -1,5 +1,5 @@
 import { TEAMS_WITH_PHOTOS } from "./config.js";
-import { fetchPeriodScores } from "./espnApi.js";
+import { fetchPeriodScores } from "./espnApi.js?v=night-1";
 import { formatShortDate, getPeriodDate } from "./dates.js";
 
 const INTRO_MS = 2800;
@@ -86,8 +86,8 @@ function renderWinners() {
     root.replaceChildren(element("p", "לא היו משחקים בלילה האחרון.", "status"));
     return;
   }
-  const byAverage = played.toSorted((a, b) => b.points / b.games - a.points / a.games);
-  const byPoints = played.toSorted((a, b) => b.points - a.points);
+  const byAverage = [...played].sort((a, b) => b.points / b.games - a.points / a.games);
+  const byPoints = [...played].sort((a, b) => b.points - a.points);
   const top = byAverage[0];
   const most = byPoints[0];
   const date = formatShortDate(getPeriodDate(context.period, context.latestPeriod));

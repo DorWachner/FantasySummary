@@ -1,5 +1,5 @@
 import { BENCH_SLOT_ID, INJURED_RESERVE_SLOT_ID, INJURY_LABELS, POSITION_NAMES, PRO_TEAM_ABBREVIATIONS, getPlayerHeadshotUrl } from "./config.js";
-import { fetchRosters } from "./espnApi.js";
+import { fetchRosters } from "./espnApi.js?v=night-1";
 import { escapeHtml, formatNumber, renderTeamAvatar } from "./format.js";
 
 const SEASON_SPLIT_ID = 0;

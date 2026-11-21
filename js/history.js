@@ -1,4 +1,4 @@
-import { fetchPeriodPoints } from "./espnApi.js";
+import { fetchPeriodPoints } from "./espnApi.js?v=night-1";
 
 // Completed days, written once a day by the update-history GitHub Action.
 const HISTORY_URL = "data/history.json";
