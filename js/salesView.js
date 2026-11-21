@@ -193,7 +193,7 @@ export function showSales() {
     } else seasonPanel.append(element("p", "טרם נשמרו תחזיות פתיחה לעונה הזאת."));
     boards = new Map([
       ["night-tab", group("המוכר של הלילה · " + formatShortDate(getPeriodDate(period, latestPeriod)),
-        night.map(row => {
+        night.slice(0, 15).map(row => {
           const prior = history.latest.previousNight;
           return {...row, previousRank: prior ? (prior.indexOf(row.playerId) + 1 || null) : undefined};
         }), true)],
