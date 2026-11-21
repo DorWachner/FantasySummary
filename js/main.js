@@ -7,13 +7,17 @@ import { initChart, renderChartStatus, setChartData } from "./chartView.js";
 import { initRoster, openRoster, resetRosters } from "./rosterView.js";
 import { initUpdates, setUpdatesContext, showUpdates } from "./updatesView.js";
 
-const VIEWS = ["table", "updates"];
+import { setSalesContext, showSales } from "./salesView.js?v=rankings-3";
+const VIEWS = ["table", "updates", "sales", "kills"];
 const refreshButton = document.getElementById("refresh");
 const updatedAtElement = document.getElementById("updated-at");
 const lightbox = document.getElementById("lightbox");
 
 let teams = [];
 let seasonId = getCurrentSeasonId();
+// Follow the same 06:30 UTC daily cutoff as the league history workflow.
+const salesUpdateDay = () => new Date(Date.now() - 390 * 60000).toISOString().slice(0, 10);
+let loadedDay;
 
 const showView = () => {
   const requestedView = location.hash.replace("#", "");
@@ -22,6 +26,7 @@ const showView = () => {
     document.getElementById(`view-${name}`).hidden = name !== view;
     document.querySelector(`[data-nav="${name}"]`).classList.toggle("active", name === view);
   });
+  if (view === "sales" || view === "kills") showSales();
   if (view === "updates") {
     showUpdates();
   }
@@ -46,6 +51,7 @@ const load = () => {
   return fetchLeague(getCurrentSeasonId())
     .then((league) => {
       seasonId = league.seasonId;
+      loadedDay = salesUpdateDay();
       teams = toTeamSummaries(league);
       const leagueName = league.settings?.name ?? "Fantasy Summary";
       document.getElementById("league-name").textContent = leagueName;
@@ -54,6 +60,7 @@ const load = () => {
         "עודכן: " + new Intl.DateTimeFormat("he-IL", { dateStyle: "medium", timeStyle: "short" }).format(new Date());
       setTeams(teams);
       const latestPeriod = getLatestPeriod(league);
+      setSalesContext({ seasonId, latestPeriod, period: league.status?.isExpired ? latestPeriod : latestPeriod - 1, teams: new Map(teams.map(t => [t.teamId, t])) });
       setUpdatesContext({ seasonId, latestPeriod, teamsById: new Map(teams.map((team) => [team.teamId, team])) });
       showView();
       return loadHistory(latestPeriod);
@@ -83,6 +90,15 @@ const initLightbox = () => {
 document.getElementById("espn-link").href = ESPN_STANDINGS_URL;
 refreshButton.addEventListener("click", load);
 window.addEventListener("hashchange", showView);
+function refreshSalesDay() {
+  if (["#sales", "#kills"].includes(location.hash) && !document.hidden && !refreshButton.disabled && loadedDay !== salesUpdateDay()) load();
+}
+window.addEventListener("hashchange", refreshSalesDay);
+document.addEventListener("visibilitychange", refreshSalesDay);
+setInterval(refreshSalesDay, 60000);
+setInterval(() => {
+  if (!document.hidden && ["#sales", "#kills"].includes(location.hash)) showSales();
+}, 5 * 60000);
 initTable({
   onTeamSelected: (teamId) => {
     const team = teams.find((candidate) => candidate.teamId === teamId);
