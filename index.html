@@ -4,21 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fantasy Summary</title>
-  <link rel="stylesheet" href="css/styles.css?v=rankings-1">
+  <link rel="stylesheet" href="css/styles.css?v=night-1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-  <script src="js/main.js?v=rankings-3" type="module"></script>
+  <script src="js/main.js?v=night-1" type="module"></script>
 </head>
-<body>
+<body class="is-booting">
   <div class="layout">
     <nav class="sidebar" aria-label="תפריט">
       <div class="brand">🏀 Fantasy Summary</div>
       <a href="#table" data-nav="table">טבלה</a>
+      <a href="#night" data-nav="night">המנג'ר של הלילה</a>
       <a href="#sales" data-nav="sales">טבלת מכירות</a>
       <a href="#kills" data-nav="kills">טבלת הריגות</a>
       <a href="#updates" data-nav="updates">עדכוני שחקנים</a>
     </nav>
 
     <main>
+      <div id="app-loading" role="status">
+        <div class="loader-court" aria-hidden="true">
+          <span class="loader-ball"></span>
+          <span class="loader-shadow"></span>
+        </div>
+        <span class="visually-hidden">טוען…</span>
+      </div>
       <header class="page-header">
         <h1 id="league-name">Fantasy Summary</h1>
         <p class="subtitle">
@@ -72,11 +80,26 @@
         </section>
       </section>
 
+      <section id="view-night" hidden>
+        <div class="sales-heading">
+          <h2>המנג'ר של הלילה</h2>
+          <div class="night-actions">
+            <button type="button" id="night-replay">▶ הפעלה מחדש</button>
+            <button type="button" id="night-to-table" hidden>לטבלה ←</button>
+          </div>
+        </div>
+        <div id="night-content" aria-live="polite"></div>
+      </section>
       <section id="view-sales" hidden>
         <div class="sales-heading"><h2 id="sales-title">טבלת מכירות</h2></div>
         <div class="segmented updates-tabs" role="tablist" aria-label="דירוג מכירות">
           <button type="button" role="tab" id="night-tab" aria-controls="sales-content" aria-selected="true" class="active">המוכר של הלילה</button>
           <button type="button" role="tab" id="season-tab" aria-controls="sales-content" aria-selected="false" tabindex="-1">המוכרים העונתיים</button>
+        </div>
+        <div class="segmented sales-metric" role="group" aria-label="דירוג לפי">
+          <span class="muted">דירוג לפי:</span>
+          <button type="button" data-gap-metric="points" aria-pressed="false">נקודות</button>
+          <button type="button" data-gap-metric="percent" aria-pressed="true" class="active">אחוזים</button>
         </div>
         <div id="sales-content" role="tabpanel" tabindex="0" aria-labelledby="night-tab" aria-live="polite">טוען נתוני מכירות…</div>
       </section>
@@ -85,6 +108,11 @@
         <div class="segmented updates-tabs" role="tablist" aria-label="דירוג הריגות">
           <button type="button" role="tab" id="kills-night" aria-controls="kills-content" aria-selected="true" class="active">ההורג היומי</button>
           <button type="button" role="tab" id="kills-season" aria-controls="kills-content" aria-selected="false" tabindex="-1">מציאת העונה</button>
+        </div>
+        <div class="segmented sales-metric" role="group" aria-label="דירוג לפי">
+          <span class="muted">דירוג לפי:</span>
+          <button type="button" data-gap-metric="points" aria-pressed="false">נקודות</button>
+          <button type="button" data-gap-metric="percent" aria-pressed="true" class="active">אחוזים</button>
         </div>
         <div id="kills-content" role="tabpanel" tabindex="0" aria-labelledby="kills-night" aria-live="polite"></div>
       </section>

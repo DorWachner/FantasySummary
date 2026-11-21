@@ -3,6 +3,22 @@ import { INJURY_LABELS } from "./config.js";
 export const SEASON_RANK_LIMIT = 10;
 export const SALES_METRIC = "per-game";
 
+export const GAP_METRIC = { POINTS: "points", PERCENT: "percent" };
+
+// Ranks rows by their gap from the baseline, in points or in percent of the baseline (20 against 40 is 50%).
+// Sellers fall below the baseline; leaders rise above it.
+export function rankByGap(rows, metric, leaders = false) {
+  const direction = leaders ? -1 : 1;
+  const ranked = [];
+  rows.forEach(row => {
+    const pointsGap = direction * (row.expected - row.actual);
+    const percentGap = row.expected > 0 ? 100 * pointsGap / row.expected : null;
+    const gap = metric === GAP_METRIC.PERCENT ? percentGap : pointsGap;
+    if (gap != null) ranked.push({...row, pointsGap, percentGap, gap});
+  });
+  return ranked.sort((a,b) => b.gap - a.gap || a.playerId - b.playerId);
+}
+
 export function seasonRanking(totals, cards, projections, seasonId, period) {
   const stats = new Map(cards.map(card => [card.player.id, card.player.stats ?? []]));
   const rows = [];
@@ -28,14 +44,14 @@ export function displayedSeasonRows(rows) {
     .slice(0, SEASON_RANK_LIMIT);
 }
 
-export function saveSeasonRanks(history, period, today) {
-  history.seasonRanks ??= {};
+export function saveSeasonRanks(history, period, today, key = "seasonRanks", rank = rows => rows) {
+  history[key] ??= {};
   const last = history.latest;
   // Older snapshots retained injury status only for the latest scoring period.
-  if (last?.projectionsAvailable && !history.seasonRanks[last.period]) {
-    history.seasonRanks[last.period] = displayedSeasonRows(last.today).map(row => row.playerId);
+  if (last?.projectionsAvailable && !history[key][last.period]) {
+    history[key][last.period] = displayedSeasonRows(rank(last.today)).map(row => row.playerId);
   }
-  history.seasonRanks[period] = displayedSeasonRows(today).map(row => row.playerId);
+  history[key][period] = displayedSeasonRows(rank(today)).map(row => row.playerId);
 }
 
 export function compareRankings(today, previousIds = []) {
@@ -43,9 +59,8 @@ export function compareRankings(today, previousIds = []) {
   return displayedSeasonRows(today).map(row => ({...row, previousRank: previousRanks.get(row.playerId)}));
 }
 
-export function seasonLeaders(rows) {
-  return displayedSeasonRows(rows.map(row => ({...row, gap:row.actual - row.expected}))
-    .sort((a,b) => b.gap - a.gap || a.playerId - b.playerId));
+export function seasonLeaders(rows, metric = GAP_METRIC.POINTS) {
+  return displayedSeasonRows(rankByGap(rows, metric, true));
 }
 
 export function nightRanking(totals, cards, seasonId, period, teams, aboveAverage = false) {

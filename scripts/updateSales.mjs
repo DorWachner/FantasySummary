@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { getCurrentSeasonId } from "../js/config.js";
 import { fetchLeague, getLatestPeriod, fetchSeasonCards, fetchRosteredPlayerCards } from "../js/espnApi.js";
-import { SALES_METRIC, seasonRanking, nightRanking, saveSeasonRanks, seasonLeaders } from "../js/seasonSales.js";
+import { GAP_METRIC, SALES_METRIC, seasonRanking, nightRanking, rankByGap, saveSeasonRanks, seasonLeaders } from "../js/seasonSales.js";
 
 const league = await fetchLeague(getCurrentSeasonId());
 const season = league.seasonId;
@@ -30,6 +30,8 @@ for (const {player} of cards) {
 const today = rank(period).map(row => ({...row, team:teams.get(row.teamId), nightPoints:nightlyPoints.get(row.playerId) ?? null}));
 history.periods[period] = compact(today);
 saveSeasonRanks(history, period, today);
+const byPercent = (rows, leaders) => rankByGap(rows, GAP_METRIC.PERCENT, leaders);
+saveSeasonRanks(history, period, today, "percentSeasonRanks", rows => byPercent(rows));
 const night = nightRanking(totals,cards,season,period,teams);
 const nightLeaders = nightRanking(totals,cards,season,period,teams,true);
 history.leaderRanks ??= {};
@@ -37,9 +39,16 @@ history.leaderRanks[period] = {
   night: nightLeaders.map(row => row.playerId),
   season: seasonLeaders(today).map(row => row.playerId)
 };
+history.percentLeaderRanks ??= {};
+history.percentLeaderRanks[period] = {
+  night: byPercent(nightLeaders, true).map(row => row.playerId),
+  season: seasonLeaders(today, GAP_METRIC.PERCENT).map(row => row.playerId)
+};
 history.nightRanks ??= {};
 const previousNight = history.nightRanks[period-1] ?? nightRanking(totals,cards,season,period-1,teams).map(row => row.playerId);
 history.nightRanks[period] = night.map(row => row.playerId);
+history.percentNightRanks ??= {};
+history.percentNightRanks[period] = byPercent(night).map(row => row.playerId);
 const nbaResponse = await fetch("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams?limit=50");
 if (!nbaResponse.ok) throw Error("ESPN NBA teams: " + nbaResponse.status);
 const nba = await nbaResponse.json();

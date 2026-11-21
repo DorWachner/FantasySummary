@@ -1,4 +1,4 @@
-import { getLeagueUrl } from "./config.js";
+import { BENCH_SLOT_ID, GAMES_PLAYED_STAT_ID, INJURED_RESERVE_SLOT_ID, getLeagueUrl } from "./config.js";
 
 const fetchJson = (url) =>
   fetch(url, { headers: { accept: "application/json" } }).then((response) => {
@@ -81,3 +81,21 @@ export const fetchSeasonCards = (seasonId) =>
     if (!response.ok) throw Error("ESPN " + response.status);
     return (await response.json()).players;
   });
+
+const RESERVE_SLOT_IDS = new Set([BENCH_SLOT_ID, INJURED_RESERVE_SLOT_ID]);
+
+const playedInPeriod = (entry, periodId) =>
+  (entry.playerPoolEntry?.player?.stats ?? []).some((stat) =>
+    stat.scoringPeriodId === periodId && stat.statSourceId === 0 && stat.stats?.[GAMES_PLAYED_STAT_ID] > 0);
+
+// Each team's fantasy points and games played by its active lineup in one scoring period.
+export const fetchPeriodScores = (seasonId, periodId) =>
+  fetchJson(getLeagueUrl(seasonId, ["mMatchupScore"], { scoringPeriodId: periodId })).then((league) =>
+    (league.schedule ?? []).flatMap((matchup) => matchup.teams ?? [matchup.home, matchup.away])
+      .filter((entry) => entry?.rosterForCurrentScoringPeriod)
+      .map(({ teamId, rosterForCurrentScoringPeriod: roster }) => ({
+        teamId,
+        points: roster.appliedStatTotal ?? 0,
+        games: (roster.entries ?? []).filter((entry) =>
+          !RESERVE_SLOT_IDS.has(entry.lineupSlotId) && playedInPeriod(entry, periodId)).length
+      })));

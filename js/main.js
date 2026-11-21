@@ -7,8 +7,9 @@ import { initChart, renderChartStatus, setChartData } from "./chartView.js";
 import { initRoster, openRoster, resetRosters } from "./rosterView.js";
 import { initUpdates, setUpdatesContext, showUpdates } from "./updatesView.js";
 
-import { setSalesContext, showSales } from "./salesView.js?v=rankings-3";
-const VIEWS = ["table", "updates", "sales", "kills"];
+import { setSalesContext, showSales } from "./salesView.js?v=rankings-5";
+import { openNightFirst, setNightContext, shouldOpenNightFirst, showNightWinner } from "./nightWinnerView.js";
+const VIEWS = ["table", "night", "updates", "sales", "kills"];
 const refreshButton = document.getElementById("refresh");
 const updatedAtElement = document.getElementById("updated-at");
 const lightbox = document.getElementById("lightbox");
@@ -27,6 +28,7 @@ const showView = () => {
     document.querySelector(`[data-nav="${name}"]`).classList.toggle("active", name === view);
   });
   if (view === "sales" || view === "kills") showSales();
+  if (view === "night") showNightWinner();
   if (view === "updates") {
     showUpdates();
   }
@@ -60,7 +62,15 @@ const load = () => {
         "עודכן: " + new Intl.DateTimeFormat("he-IL", { dateStyle: "medium", timeStyle: "short" }).format(new Date());
       setTeams(teams);
       const latestPeriod = getLatestPeriod(league);
-      setSalesContext({ seasonId, latestPeriod, period: league.status?.isExpired ? latestPeriod : latestPeriod - 1, teams: new Map(teams.map(t => [t.teamId, t])) });
+      const lastNight = league.status?.isExpired ? latestPeriod : latestPeriod - 1;
+      const teamsById = new Map(teams.map((team) => [team.teamId, team]));
+      setSalesContext({ seasonId, latestPeriod, period: lastNight, teams: teamsById });
+      setNightContext({ seasonId, latestPeriod, period: lastNight, teams: teamsById });
+      const isOnTable = ["", "#table"].includes(location.hash);
+      if (isOnTable && shouldOpenNightFirst(lastNight)) {
+        openNightFirst();
+        history.replaceState(null, "", "#night");
+      }
       setUpdatesContext({ seasonId, latestPeriod, teamsById: new Map(teams.map((team) => [team.teamId, team])) });
       showView();
       return loadHistory(latestPeriod);
@@ -70,6 +80,7 @@ const load = () => {
       renderStatus(`לא הצלחנו לטעון את הנתונים מ-ESPN (${error.message}). נסו לרענן.`, true);
     })
     .finally(() => {
+      document.body.classList.remove("is-booting");
       refreshButton.disabled = false;
     });
 };
