@@ -32,7 +32,7 @@ const fetchInBatches = (seasonId, periodIds) =>
 Promise.all([readHistory(), fetchLeague(getCurrentSeasonId())])
   .then(([history, league]) => {
     const seasonId = league.seasonId;
-    const lastCompletedPeriod = getLatestPeriod(league) - 1;
+    const lastCompletedPeriod = getLatestPeriod(league) - (league.status?.isExpired ? 0 : 1);
     const storedPeriods = history?.seasonId === seasonId ? history.periods : {};
     const refreshFrom = lastCompletedPeriod - PERIODS_TO_REFRESH + 1;
     const periodsToFetch = Array.from({ length: Math.max(lastCompletedPeriod, 0) }, (_, index) => index + 1)

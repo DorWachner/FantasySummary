@@ -43,7 +43,12 @@ export function compareRankings(today, previousIds = []) {
   return displayedSeasonRows(today).map(row => ({...row, previousRank: previousRanks.get(row.playerId)}));
 }
 
-export function nightRanking(totals, cards, seasonId, period, teams) {
+export function seasonLeaders(rows) {
+  return displayedSeasonRows(rows.map(row => ({...row, gap:row.actual - row.expected}))
+    .sort((a,b) => b.gap - a.gap || a.playerId - b.playerId));
+}
+
+export function nightRanking(totals, cards, seasonId, period, teams, aboveAverage = false) {
   const night = [];
   const games = new Map(cards.map(card => [card.player.id, card.player.stats ?? []]));
   for (const { player, onTeamId } of totals) {
@@ -57,8 +62,9 @@ export function nightRanking(totals, cards, seasonId, period, teams) {
     const actual = (total.appliedTotal - later.reduce((sum,s) => sum + s.appliedTotal, 0)) / (count - later.length);
     const game = (games.get(player.id) ?? []).find(s => s.seasonId === seasonId && s.statSourceId === 0 &&
       s.statSplitTypeId === 5 && s.scoringPeriodId === period && s.stats?.["42"] > 0);
-    if (game && Number.isFinite(game.appliedTotal) && actual > game.appliedTotal) {
-      night.push({ ...base, actual: game.appliedTotal, expected: actual, gap: actual - game.appliedTotal });
+    if (game && Number.isFinite(game.appliedTotal)) {
+      const gap = aboveAverage ? game.appliedTotal - actual : actual - game.appliedTotal;
+      if (gap > 0) night.push({ ...base, actual: game.appliedTotal, expected: actual, gap });
     }
   }
   return night.sort((a,b) => b.gap - a.gap || a.name.localeCompare(b.name));

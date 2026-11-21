@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fantasy Summary</title>
-  <link rel="stylesheet" href="css/styles.css?v=gm-board-5">
+  <link rel="stylesheet" href="css/styles.css?v=rankings-1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-  <script src="js/main.js?v=gm-board-6" type="module"></script>
+  <script src="js/main.js?v=rankings-3" type="module"></script>
 </head>
 <body>
   <div class="layout">
@@ -14,6 +14,7 @@
       <div class="brand">🏀 Fantasy Summary</div>
       <a href="#table" data-nav="table">טבלה</a>
       <a href="#sales" data-nav="sales">טבלת מכירות</a>
+      <a href="#kills" data-nav="kills">טבלת הריגות</a>
       <a href="#updates" data-nav="updates">עדכוני שחקנים</a>
     </nav>
 
@@ -78,6 +79,14 @@
           <button type="button" role="tab" id="season-tab" aria-controls="sales-content" aria-selected="false" tabindex="-1">המוכרים העונתיים</button>
         </div>
         <div id="sales-content" role="tabpanel" tabindex="0" aria-labelledby="night-tab" aria-live="polite">טוען נתוני מכירות…</div>
+      </section>
+      <section id="view-kills" hidden>
+        <div class="sales-heading"><h2>טבלת הריגות</h2></div>
+        <div class="segmented updates-tabs" role="tablist" aria-label="דירוג הריגות">
+          <button type="button" role="tab" id="kills-night" aria-controls="kills-content" aria-selected="true" class="active">ההורג היומי</button>
+          <button type="button" role="tab" id="kills-season" aria-controls="kills-content" aria-selected="false" tabindex="-1">מציאת העונה</button>
+        </div>
+        <div id="kills-content" role="tabpanel" tabindex="0" aria-labelledby="kills-night" aria-live="polite"></div>
       </section>
       <section id="view-updates" hidden>
         <div class="segmented updates-tabs" role="tablist" aria-label="סוג עדכון">

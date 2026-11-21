@@ -7,8 +7,8 @@ import { initChart, renderChartStatus, setChartData } from "./chartView.js";
 import { initRoster, openRoster, resetRosters } from "./rosterView.js";
 import { initUpdates, setUpdatesContext, showUpdates } from "./updatesView.js";
 
-import { setSalesContext, showSales } from "./salesView.js?v=gm-board-6";
-const VIEWS = ["table", "updates", "sales"];
+import { setSalesContext, showSales } from "./salesView.js?v=rankings-3";
+const VIEWS = ["table", "updates", "sales", "kills"];
 const refreshButton = document.getElementById("refresh");
 const updatedAtElement = document.getElementById("updated-at");
 const lightbox = document.getElementById("lightbox");
@@ -26,7 +26,7 @@ const showView = () => {
     document.getElementById(`view-${name}`).hidden = name !== view;
     document.querySelector(`[data-nav="${name}"]`).classList.toggle("active", name === view);
   });
-  if (view === "sales") showSales();
+  if (view === "sales" || view === "kills") showSales();
   if (view === "updates") {
     showUpdates();
   }
@@ -91,11 +91,14 @@ document.getElementById("espn-link").href = ESPN_STANDINGS_URL;
 refreshButton.addEventListener("click", load);
 window.addEventListener("hashchange", showView);
 function refreshSalesDay() {
-  if (location.hash === "#sales" && !document.hidden && !refreshButton.disabled && loadedDay !== salesUpdateDay()) load();
+  if (["#sales", "#kills"].includes(location.hash) && !document.hidden && !refreshButton.disabled && loadedDay !== salesUpdateDay()) load();
 }
 window.addEventListener("hashchange", refreshSalesDay);
 document.addEventListener("visibilitychange", refreshSalesDay);
 setInterval(refreshSalesDay, 60000);
+setInterval(() => {
+  if (!document.hidden && ["#sales", "#kills"].includes(location.hash)) showSales();
+}, 5 * 60000);
 initTable({
   onTeamSelected: (teamId) => {
     const team = teams.find((candidate) => candidate.teamId === teamId);
