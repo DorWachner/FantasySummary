@@ -259,7 +259,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
   .chart-container { height: 300px; }
   .updates-tabs button { padding: 6px 10px; font-size: 14px; }
 }
-:is(#view-sales, #view-kills) { container-type: inline-size; max-width: 100%; }
+:is(#view-sales, #view-kills, #view-night) { container-type: inline-size; max-width: 100%; }
 .sales-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .sales-heading h2 { font-size: clamp(1.45rem, 3vw, 2rem); overflow-wrap: anywhere; }
 :is(#view-sales, #view-kills) button, .sales-board summary { min-height: 44px; }
@@ -539,6 +539,24 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 @keyframes night-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes night-fade-out { to { opacity: 0; visibility: hidden; } }
 @keyframes night-card-in { from { opacity: 0; transform: translateY(40px) scale(.85); } to { opacity: 1; transform: none; } }
+/* The full night table fades in under the winners. */
+.night-board { margin-top: 16px; padding: 16px; opacity: 0; visibility: hidden; }
+.night-board.shown { visibility: visible; animation: night-board-in .7s 1.2s cubic-bezier(.2,1,.4,1) both; }
+.night-table { width: 100%; }
+.night-team-cell { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+.night-row-photo { flex: none; width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--grid); }
+.night-team-names { display: grid; min-width: 0; }
+.night-team-names strong { overflow-wrap: anywhere; }
+.night-team-names span { color: var(--muted); font-size: .85rem; }
+.night-number span { display: block; direction: ltr; color: var(--muted); font-size: 1rem; font-weight: 650; }
+.night-number.active span { color: var(--text); font-size: 1.35rem; font-weight: 800; }
+@keyframes night-board-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@container (max-width: 700px) {
+  .night-table tr { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .night-table .night-team-cell { grid-column: 1 / -1; min-width: 0; padding: 12px 16px 0; }
+  .night-table .sales-standing { display: none; }
+  .night-table .night-team-names strong::before { content: attr(data-rank) ". "; }
+}
 @media (max-width: 560px) {
   .night-stage { min-height: 520px; }
   .night-winners { grid-template-columns: minmax(0, 1fr); align-content: center; }

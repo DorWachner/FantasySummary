@@ -18,6 +18,15 @@ public and ESPN allows cross-origin requests, so no login and no server are need
 - A season chart of cumulative points or rank per day.
 - Below 1100px the table turns into cards.
 
+**המנג'ר של הלילה** (`#night`)
+
+- A drum roll plays during the intro and ends in a cymbal crash as the two winners appear. It is
+  synthesized with the Web Audio API (`js/drumroll.js`), and the 🔊 button turns it off on this device.
+  Browsers block sound until the visitor interacts with the page, so the automatic first-visit intro
+  may be silent; opening the tab or pressing replay plays it.
+- After the winners, a full table of the night: every team's games, points and average, sortable
+  by points or by average.
+
 **עדכוני שחקנים** (`#updates`)
 
 - **שחקנים חמים**: the 20 free agents with the best average over their last 3 games this season.

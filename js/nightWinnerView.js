@@ -1,13 +1,16 @@
 import { TEAMS_WITH_PHOTOS } from "./config.js";
 import { fetchPeriodScores } from "./espnApi.js?v=night-1";
 import { formatShortDate, getPeriodDate } from "./dates.js";
+import { isSoundOn, playDrumroll, setSoundOn, stopDrumroll } from "./drumroll.js";
 
 const INTRO_MS = 2800;
-const WINNERS_SHOWN_MS = 7000;
+// Long enough to read the full night table below the winners.
+const WINNERS_SHOWN_MS = 14000;
 const SEEN_PERIOD_KEY = "nightWinnerSeenPeriod";
 const root = document.getElementById("night-content");
 const replayButton = document.getElementById("night-replay");
 const tableButton = document.getElementById("night-to-table");
+const soundButton = document.getElementById("night-sound");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const number = new Intl.NumberFormat("he-IL", { maximumFractionDigits: 1 });
 let context;
@@ -15,6 +18,7 @@ let scores;
 let introTimer;
 let returnTimer;
 let isReturningToTable = false;
+let sortBy = "points";
 
 function readSeenPeriod() {
   try { return localStorage.getItem(SEEN_PERIOD_KEY); } catch { return null; }
@@ -48,8 +52,23 @@ function goToTable() {
 
 tableButton.addEventListener("click", goToTable);
 window.addEventListener("hashchange", () => {
-  if (location.hash !== "#night") stopReturning();
+  if (location.hash !== "#night") {
+    stopReturning();
+    stopDrumroll();
+  }
 });
+
+function showSoundState() {
+  const on = isSoundOn();
+  soundButton.textContent = on ? "🔊 צליל" : "🔇 ללא צליל";
+  soundButton.setAttribute("aria-pressed", String(on));
+}
+
+soundButton.addEventListener("click", () => {
+  setSoundOn(!isSoundOn());
+  showSoundState();
+});
+showSoundState();
 
 function element(tag, text = "", className = "") {
   const node = document.createElement(tag);
@@ -80,6 +99,99 @@ function winnerCard(title, score, highlight, detail) {
   return card;
 }
 
+const average = (score) => score.games > 0 ? score.points / score.games : null;
+
+function compareScores(a, b) {
+  if (sortBy === "average") {
+    // Teams without games have no average and go last.
+    const gap = (average(b) ?? -Infinity) - (average(a) ?? -Infinity);
+    if (gap) return gap;
+    return b.points - a.points;
+  }
+  return b.points - a.points || (average(b) ?? -Infinity) - (average(a) ?? -Infinity);
+}
+
+function numberCell(label, text, active) {
+  const td = element("td", "", "sales-number night-number" + (active ? " active" : ""));
+  td.dataset.label = label;
+  td.append(element("span", text));
+  return td;
+}
+
+function renderBoard(board) {
+  const date = formatShortDate(getPeriodDate(context.period, context.latestPeriod));
+  const header = element("header", "", "sales-board-header");
+  const toggle = element("div", "", "segmented");
+  toggle.setAttribute("role", "group");
+  toggle.setAttribute("aria-label", "מיון טבלת הלילה");
+  for (const [key, label] of [["points", "לפי נקודות"], ["average", "לפי ממוצע"]]) {
+    const button = element("button", label, key === sortBy ? "active" : "");
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(key === sortBy));
+    button.addEventListener("click", () => {
+      sortBy = key;
+      renderBoard(board);
+    });
+    toggle.append(button);
+  }
+  header.append(element("h3", "טבלת הלילה · " + date), toggle);
+  const table = element("table", "", "sales-table night-table");
+  const headRow = element("tr");
+  const columns = [["מקום"], ["קבוצה"], ["משחקים"], ["נקודות", "points"], ["ממוצע", "average"]];
+  for (const [label, key] of columns) {
+    const th = element("th");
+    th.scope = "col";
+    if (key) {
+      const isActive = key === sortBy;
+      th.className = "sales-number sortable" + (isActive ? " active" : "");
+      th.setAttribute("aria-sort", isActive ? "descending" : "none");
+      const button = element("button", label);
+      button.type = "button";
+      button.addEventListener("click", () => {
+        sortBy = key;
+        renderBoard(board);
+      });
+      th.append(button);
+    } else {
+      if (label === "משחקים") th.className = "sales-number";
+      th.textContent = label;
+    }
+    headRow.append(th);
+  }
+  const thead = element("thead");
+  thead.append(headRow);
+  const tbody = element("tbody");
+  for (const [index, score] of [...scores].sort(compareScores).entries()) {
+    const team = context.teams.get(score.teamId);
+    const tr = element("tr");
+    const standing = element("td", "", "sales-standing");
+    standing.dataset.label = "מקום";
+    standing.append(element("span", String(index + 1), "sales-rank"));
+    const teamCell = element("td", "", "night-team-cell");
+    teamCell.dataset.label = "קבוצה";
+    const photo = teamPhoto(team);
+    photo.className = "night-row-photo";
+    const names = element("div", "", "night-team-names");
+    const name = element("strong", team?.teamName ?? "");
+    name.dir = "auto";
+    name.dataset.rank = String(index + 1);
+    const manager = element("span", team?.managerName ?? "");
+    manager.dir = "auto";
+    names.append(name, manager);
+    teamCell.append(photo, names);
+    const avg = average(score);
+    tr.append(standing, teamCell,
+      numberCell("משחקים", String(score.games), false),
+      numberCell("נקודות", number.format(score.points), sortBy === "points"),
+      numberCell("ממוצע", avg == null ? "—" : number.format(avg), sortBy === "average"));
+    tbody.append(tr);
+  }
+  table.append(thead, tbody);
+  const scroll = element("div", "", "sales-table-wrap");
+  scroll.append(table);
+  board.replaceChildren(header, scroll);
+}
+
 function renderWinners() {
   const played = scores.filter((score) => score.games > 0);
   if (!played.length) {
@@ -106,7 +218,12 @@ function renderWinners() {
       { value: number.format(most.points), label: "נקודות" },
       most.games + " משחקים · ממוצע " + number.format(most.points / most.games)));
   stage.append(intro, winners);
-  root.replaceChildren(stage);
+  const board = element("section", "", "card sales-board night-board");
+  // Reading or sorting the table keeps the page here instead of moving on to the main table.
+  board.addEventListener("pointerdown", () => clearTimeout(returnTimer));
+  board.addEventListener("focusin", () => clearTimeout(returnTimer));
+  renderBoard(board);
+  root.replaceChildren(stage, board);
   saveSeenPeriod(context.period);
   play(stage);
 }
@@ -114,16 +231,24 @@ function renderWinners() {
 function play(stage) {
   clearTimeout(introTimer);
   clearTimeout(returnTimer);
+  stopDrumroll();
+  const board = root.querySelector(".night-board");
   stage.classList.remove("revealed", "playing");
+  board?.classList.remove("shown");
   if (reducedMotion.matches) {
     stage.classList.add("revealed");
+    board?.classList.add("shown");
     if (isReturningToTable) returnTimer = setTimeout(goToTable, WINNERS_SHOWN_MS);
     return;
   }
   // Restart the CSS animations from their first frame.
   void stage.offsetWidth;
   stage.classList.add("playing");
-  introTimer = setTimeout(() => stage.classList.add("revealed"), INTRO_MS);
+  playDrumroll(INTRO_MS / 1000);
+  introTimer = setTimeout(() => {
+    stage.classList.add("revealed");
+    board?.classList.add("shown");
+  }, INTRO_MS);
   if (isReturningToTable) returnTimer = setTimeout(goToTable, INTRO_MS + WINNERS_SHOWN_MS);
 }
 
