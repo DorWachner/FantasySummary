@@ -13,6 +13,7 @@ const tableButton = document.getElementById("night-to-table");
 const soundButton = document.getElementById("night-sound");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const number = new Intl.NumberFormat("he-IL", { maximumFractionDigits: 1 });
+const averageNumber = new Intl.NumberFormat("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 let context;
 let scores;
 let introTimer;
@@ -183,7 +184,7 @@ function renderBoard(board) {
     tr.append(standing, teamCell,
       numberCell("משחקים", String(score.games), false),
       numberCell("נקודות", number.format(score.points), sortBy === "points"),
-      numberCell("ממוצע", avg == null ? "—" : number.format(avg), sortBy === "average"));
+      numberCell("ממוצע", avg == null ? "—" : averageNumber.format(avg), sortBy === "average"));
     tbody.append(tr);
   }
   table.append(thead, tbody);
@@ -212,11 +213,11 @@ function renderWinners() {
   winners.setAttribute("aria-label", title + " · " + date);
   winners.append(
     winnerCard("הממוצע הגבוה ביותר", top,
-      { value: number.format(top.points / top.games), label: "ממוצע למשחק" },
+      { value: averageNumber.format(top.points / top.games), label: "ממוצע למשחק" },
       number.format(top.points) + " נקודות ב-" + top.games + " משחקים"),
     winnerCard("הכי הרבה נקודות", most,
       { value: number.format(most.points), label: "נקודות" },
-      most.games + " משחקים · ממוצע " + number.format(most.points / most.games)));
+      most.games + " משחקים · ממוצע " + averageNumber.format(most.points / most.games)));
   stage.append(intro, winners);
   const board = element("section", "", "card sales-board night-board");
   // Reading or sorting the table keeps the page here instead of moving on to the main table.

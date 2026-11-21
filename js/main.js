@@ -8,7 +8,7 @@ import { initRoster, openRoster, resetRosters } from "./rosterView.js";
 import { initUpdates, setUpdatesContext, showUpdates } from "./updatesView.js";
 
 import { setSalesContext, showSales } from "./salesView.js?v=rankings-6";
-import { openNightFirst, setNightContext, shouldOpenNightFirst, showNightWinner } from "./nightWinnerView.js?v=night-3";
+import { openNightFirst, setNightContext, shouldOpenNightFirst, showNightWinner } from "./nightWinnerView.js?v=night-4";
 const VIEWS = ["table", "night", "updates", "sales", "kills"];
 const refreshButton = document.getElementById("refresh");
 const updatedAtElement = document.getElementById("updated-at");
