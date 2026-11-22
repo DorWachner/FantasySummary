@@ -7,7 +7,7 @@ import { initChart, renderChartStatus, setChartData } from "./chartView.js";
 import { initRoster, openRoster, resetRosters } from "./rosterView.js";
 import { initUpdates, setUpdatesContext, showUpdates } from "./updatesView.js";
 
-import { setSalesContext, showSales } from "./salesView.js?v=rankings-6";
+import { setSalesContext, showSales } from "./salesView.js?v=rankings-7";
 import { openNightFirst, setNightContext, shouldOpenNightFirst, showNightWinner } from "./nightWinnerView.js?v=night-4";
 const VIEWS = ["table", "night", "updates", "sales", "kills"];
 const refreshButton = document.getElementById("refresh");

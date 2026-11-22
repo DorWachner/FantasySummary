@@ -1,3 +1,5 @@
+import { buildSalesSnapshot } from "./salesSnapshot.js";
+import { fetchSeasonCards, fetchRosteredPlayerCards } from "./espnApi.js?v=night-1";
 const visitorPreview = new URLSearchParams(location.search).get("preview") === "visitor";
 if (!visitorPreview && ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {
   // This optional editor exists only in the owner's local checkout.
@@ -274,21 +276,36 @@ export function showSales() {
   if (!context || pending) return;
   const current = context;
   const { seasonId } = current;
-  pending = fetch("./data/sales-history.json", {cache:"no-cache"}).then(async response => {
-    if (!response.ok) throw Error("Sales snapshot " + response.status);
-    return response.json();
-  }).then(history => {
-    if (current !== context) return;
-    if (history.season !== seasonId || history.metric !== SALES_METRIC || !history.latest) throw Error("Sales snapshot unavailable");
+  const render = history => {
     snapshot = history;
     buildBoards();
     for (const tab of selections.values()) selectTab(tab);
-    if (history.latest.period < current.period) {
-      // The scheduled job can finish after the visitor has already opened the page.
-      // Keep the last published rankings visible until the new snapshot arrives.
-      pending = undefined;
-    }
-  }).catch(() => {
+  };
+  pending = (async () => {
+    const response = await fetch("./data/sales-history.json", { cache: "no-cache" });
+    let history = response.ok ? await response.json() : null;
+    if (current !== context) return;
+    if (history?.season !== seasonId || history.metric !== SALES_METRIC) history = null;
+    if (history?.latest && (!snapshot || history.latest.period >= snapshot.latest.period)) render(history);
+    if (history?.latest?.period >= current.period) return;
+
+    // Fallback for when ESPN has moved on and the scheduled job has not published yet
+    // (or failed). The job normally catches up within half an hour.
+    const [totals, cards, projections] = await Promise.all([
+      fetchSeasonCards(seasonId),
+      fetchRosteredPlayerCards(seasonId),
+      fetch("./data/projections-" + seasonId + ".json").then(async result => {
+        if (result.status === 404) return undefined;
+        if (!result.ok) throw Error("Season projections " + result.status);
+        return (await result.json()).averages;
+      })
+    ]);
+    if (current !== context) return;
+    const teams = new Map(Array.from(current.teams, ([id, team]) => [id, team.teamName]));
+    // Build on a copy so the snapshot already on screen is not changed underneath it.
+    render(buildSalesSnapshot({ history: structuredClone(history), season: seasonId, period: current.period, totals, cards,
+      projections, teams, nbaTeams: history?.latest?.nbaTeams }));
+  })().catch(() => {
     if (current !== context) return;
     pending = undefined;
     if (boards) return;
