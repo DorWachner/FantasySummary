@@ -7,7 +7,7 @@ import { initChart, renderChartStatus, setChartData } from "./chartView.js";
 import { initRoster, openRoster, resetRosters } from "./rosterView.js";
 import { initUpdates, setUpdatesContext, showUpdates } from "./updatesView.js";
 
-import { setSalesContext, showSales } from "./salesView.js?v=rankings-6";
+import { setSalesContext, showSales } from "./salesView.js?v=rankings-7";
 import { openNightFirst, setNightContext, shouldOpenNightFirst, showNightWinner } from "./nightWinnerView.js?v=night-4";
 const VIEWS = ["table", "night", "updates", "sales", "kills"];
 const refreshButton = document.getElementById("refresh");
@@ -65,6 +65,7 @@ const load = () => {
       const lastNight = league.status?.isExpired ? latestPeriod : latestPeriod - 1;
       const teamsById = new Map(teams.map((team) => [team.teamId, team]));
       setSalesContext({ seasonId, latestPeriod, period: lastNight, teams: teamsById });
+      showSales();
       setNightContext({ seasonId, latestPeriod, period: lastNight, teams: teamsById });
       const isOnTable = ["", "#table"].includes(location.hash);
       if (isOnTable && shouldOpenNightFirst(lastNight)) {
