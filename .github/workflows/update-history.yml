@@ -2,9 +2,10 @@ name: Update league history
 
 on:
   schedule:
-    # Every 30 minutes from 03:00 to 11:30 UTC (05:00-13:30 in Israel in winter, 06:00-14:30 in summer).
-    # Each run first checks whether ESPN has finished a new night; if not, it stops without committing.
-    - cron: "*/30 3-11 * * *"
+    # ESPN usually finishes a night at about 03:00 in New York (08:00 UTC, 10:00 in Israel).
+    # Check every 30 minutes from 03:00 to 14:30 UTC so a late ESPN or a delayed GitHub run is
+    # still caught; each run stops without committing unless a new night is waiting.
+    - cron: "*/30 3-14 * * *"
   workflow_dispatch:
 
 permissions:
