@@ -1,4 +1,4 @@
-import { ESPN_STANDINGS_URL, getCurrentSeasonId } from "./config.js";
+import { ESPN_STANDINGS_URL, getCurrentSeasonId, getLeagueUrl } from "./config.js";
 import { fetchLeague, getLatestPeriod } from "./espnApi.js?v=night-1";
 import { loadPeriodPoints } from "./history.js";
 import { buildSeasonHistory, getRankMovement, toTeamSummaries } from "./standings.js";
@@ -16,9 +16,13 @@ const lightbox = document.getElementById("lightbox");
 
 let teams = [];
 let seasonId = getCurrentSeasonId();
-// Follow the same 06:30 UTC daily cutoff as the league history workflow.
-const salesUpdateDay = () => new Date(Date.now() - 390 * 60000).toISOString().slice(0, 10);
-let loadedDay;
+// ESPN moves on to a new night at about 03:00 in New York (10:00 in Israel), but not at a
+// fixed minute. While the page is visible, ask ESPN every few minutes whether another night
+// has finished, and reload everything when one has.
+const NEW_NIGHT_CHECK_MS = 5 * 60000;
+const getLastNight = (league) => getLatestPeriod(league) - (league.status?.isExpired ? 0 : 1);
+let loadedNight;
+let lastNightCheck = 0;
 
 const showView = () => {
   const requestedView = location.hash.replace("#", "");
@@ -53,7 +57,7 @@ const load = () => {
   return fetchLeague(getCurrentSeasonId())
     .then((league) => {
       seasonId = league.seasonId;
-      loadedDay = salesUpdateDay();
+      lastNightCheck = Date.now();
       teams = toTeamSummaries(league);
       const leagueName = league.settings?.name ?? "Fantasy Summary";
       document.getElementById("league-name").textContent = leagueName;
@@ -62,7 +66,8 @@ const load = () => {
         "עודכן: " + new Intl.DateTimeFormat("he-IL", { dateStyle: "medium", timeStyle: "short" }).format(new Date());
       setTeams(teams);
       const latestPeriod = getLatestPeriod(league);
-      const lastNight = league.status?.isExpired ? latestPeriod : latestPeriod - 1;
+      const lastNight = getLastNight(league);
+      loadedNight = lastNight;
       const teamsById = new Map(teams.map((team) => [team.teamId, team]));
       setSalesContext({ seasonId, latestPeriod, period: lastNight, teams: teamsById });
       setNightContext({ seasonId, latestPeriod, period: lastNight, teams: teamsById });
@@ -101,12 +106,19 @@ const initLightbox = () => {
 document.getElementById("espn-link").href = ESPN_STANDINGS_URL;
 refreshButton.addEventListener("click", load);
 window.addEventListener("hashchange", showView);
-function refreshSalesDay() {
-  if (["#sales", "#kills"].includes(location.hash) && !document.hidden && !refreshButton.disabled && loadedDay !== salesUpdateDay()) load();
+function checkForNewNight() {
+  if (document.hidden || refreshButton.disabled || loadedNight === undefined) return;
+  if (Date.now() - lastNightCheck < NEW_NIGHT_CHECK_MS) return;
+  lastNightCheck = Date.now();
+  fetch(getLeagueUrl(seasonId, ["mStatus"]), { headers: { accept: "application/json" } })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((league) => {
+      if (league && getLastNight(league) > loadedNight && !refreshButton.disabled) load();
+    })
+    .catch(() => {});
 }
-window.addEventListener("hashchange", refreshSalesDay);
-document.addEventListener("visibilitychange", refreshSalesDay);
-setInterval(refreshSalesDay, 60000);
+document.addEventListener("visibilitychange", checkForNewNight);
+setInterval(checkForNewNight, 60000);
 setInterval(() => {
   if (!document.hidden && ["#sales", "#kills"].includes(location.hash)) showSales();
 }, 5 * 60000);
