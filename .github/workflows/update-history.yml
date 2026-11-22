@@ -2,12 +2,17 @@ name: Update league history
 
 on:
   schedule:
-    # 06:30 UTC is 08:30 in Israel in winter (09:30 in summer), after the night's NBA games end.
-    - cron: "30 6 * * *"
+    # Every 30 minutes from 03:00 to 11:30 UTC (05:00-13:30 in Israel in winter, 06:00-14:30 in summer).
+    # Each run first checks whether ESPN has finished a new night; if not, it stops without committing.
+    - cron: "*/30 3-11 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: update-history
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -17,9 +22,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: node scripts/updateHistory.mjs
-      - run: node scripts/updateSales.mjs
+      - id: check
+        run: node scripts/checkSalesStale.mjs
+      # Manual runs always refresh; scheduled runs only when a new night is waiting.
+      - if: github.event_name == 'workflow_dispatch' || steps.check.outputs.stale == 'true'
+        run: node scripts/updateHistory.mjs
+      - if: github.event_name == 'workflow_dispatch' || steps.check.outputs.stale == 'true'
+        run: node scripts/updateSales.mjs
       - name: Commit the new history
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.stale == 'true'
         run: |
           git add data/history.json data/sales-history.json
           if git diff --cached --quiet; then

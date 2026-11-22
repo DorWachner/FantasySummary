@@ -65,7 +65,6 @@ const load = () => {
       const lastNight = league.status?.isExpired ? latestPeriod : latestPeriod - 1;
       const teamsById = new Map(teams.map((team) => [team.teamId, team]));
       setSalesContext({ seasonId, latestPeriod, period: lastNight, teams: teamsById });
-      showSales();
       setNightContext({ seasonId, latestPeriod, period: lastNight, teams: teamsById });
       const isOnTable = ["", "#table"].includes(location.hash);
       if (isOnTable && shouldOpenNightFirst(lastNight)) {

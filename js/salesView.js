@@ -289,6 +289,8 @@ export function showSales() {
     if (history?.latest && (!snapshot || history.latest.period >= snapshot.latest.period)) render(history);
     if (history?.latest?.period >= current.period) return;
 
+    // Fallback for when ESPN has moved on and the scheduled job has not published yet
+    // (or failed). The job normally catches up within half an hour.
     const [totals, cards, projections] = await Promise.all([
       fetchSeasonCards(seasonId),
       fetchRosteredPlayerCards(seasonId),
@@ -300,7 +302,8 @@ export function showSales() {
     ]);
     if (current !== context) return;
     const teams = new Map(Array.from(current.teams, ([id, team]) => [id, team.teamName]));
-    render(buildSalesSnapshot({ history, season: seasonId, period: current.period, totals, cards,
+    // Build on a copy so the snapshot already on screen is not changed underneath it.
+    render(buildSalesSnapshot({ history: structuredClone(history), season: seasonId, period: current.period, totals, cards,
       projections, teams, nbaTeams: history?.latest?.nbaTeams }));
   })().catch(() => {
     if (current !== context) return;
